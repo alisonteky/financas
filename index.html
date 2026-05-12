@@ -12,8 +12,36 @@
     <title>Finanças do Mês</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
-    <main class="app-shell">
+  <body class="auth-pending">
+    <section class="auth-screen" id="auth-screen" aria-labelledby="auth-title">
+      <form class="auth-card" id="auth-form">
+        <p class="eyebrow">Acesso protegido</p>
+        <h1 id="auth-title">Criar acesso</h1>
+        <p class="auth-copy" id="auth-copy">Defina um usuario e uma senha para proteger este navegador.</p>
+
+        <label>
+          Usuario
+          <input id="auth-username" name="username" type="text" autocomplete="username" required />
+        </label>
+
+        <label>
+          Senha
+          <input
+            id="auth-password"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            minlength="4"
+            required
+          />
+        </label>
+
+        <p class="auth-message" id="auth-message" role="status" aria-live="polite"></p>
+        <button class="primary-button" id="auth-submit" type="submit">Criar acesso</button>
+      </form>
+    </section>
+
+    <main class="app-shell" id="app-shell" hidden>
       <section class="topbar" aria-labelledby="app-title">
         <div>
           <p class="eyebrow">MVP financeiro</p>
@@ -29,6 +57,9 @@
           </button>
           <button class="ghost-button" id="close-month-button" type="button" title="Simular fechamento do mês">
             Fechar mês
+          </button>
+          <button class="ghost-button" id="logout-button" type="button" title="Sair do sistema">
+            Sair
           </button>
           <button class="danger-button" id="clear-data-button" type="button" title="Apagar todos os dados salvos">
             Limpar dados

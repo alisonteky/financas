@@ -23,6 +23,13 @@ Para usar um dominio proprio depois, configure o dominio em **Settings > Pages >
 - Use **Importar** para restaurar um backup em outro navegador ou computador.
 - Como este MVP nao tem login nem banco na nuvem, os dados ainda nao sincronizam automaticamente entre dispositivos.
 
+## Login
+
+- Na primeira abertura, crie um usuario e uma senha.
+- A senha nao fica salva em texto puro; o app salva um hash local no navegador.
+- Este login protege o acesso no mesmo navegador, mas ainda nao e autenticacao de servidor.
+- Para varios usuarios ou sincronizacao entre dispositivos, o proximo passo e conectar um backend com autenticacao real.
+
 ## Regras do MVP
 
 - Cada lancamento tem nome, data da compra, valor opcional, tipo e status de pagamento.

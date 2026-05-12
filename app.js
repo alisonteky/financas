@@ -1,4 +1,6 @@
 const STORAGE_KEY = "finance-mvp-state-v1";
+const AUTH_KEY = "finance-mvp-auth-v1";
+const SESSION_KEY = "finance-mvp-session-v1";
 
 const ENTRY_TYPE_OPTIONS = [
   { value: "monthly", label: "Conta mensal" },
@@ -29,6 +31,15 @@ const ENTRY_TYPE_LABELS = Object.fromEntries(
 
 const state = loadState();
 const elements = {
+  appShell: document.querySelector("#app-shell"),
+  authScreen: document.querySelector("#auth-screen"),
+  authForm: document.querySelector("#auth-form"),
+  authTitle: document.querySelector("#auth-title"),
+  authCopy: document.querySelector("#auth-copy"),
+  authUsername: document.querySelector("#auth-username"),
+  authPassword: document.querySelector("#auth-password"),
+  authMessage: document.querySelector("#auth-message"),
+  authSubmit: document.querySelector("#auth-submit"),
   form: document.querySelector("#entry-form"),
   name: document.querySelector("#name"),
   purchaseDate: document.querySelector("#purchase-date"),
@@ -53,6 +64,7 @@ const elements = {
   importDataButton: document.querySelector("#import-data-button"),
   importFile: document.querySelector("#import-file"),
   closeMonthButton: document.querySelector("#close-month-button"),
+  logoutButton: document.querySelector("#logout-button"),
   clearDataButton: document.querySelector("#clear-data-button"),
   currentMonthLabel: document.querySelector("#current-month-label"),
   pendingCount: document.querySelector("#pending-count"),
@@ -65,16 +77,123 @@ const elements = {
 
 let activeTab = "pending";
 let editingId = null;
+let appReady = false;
 
 init();
 
 function init() {
+  bindAuthEvents();
+  if (isSessionActive()) {
+    unlockApp();
+    return;
+  }
+
+  renderAuth();
+}
+
+function initializeApp() {
+  if (appReady) {
+    render();
+    return;
+  }
+
+  appReady = true;
   closePastMonths();
   setupChoiceSelects();
   setDefaultDates();
   bindEvents();
   syncInstallmentFields();
   render();
+}
+
+function bindAuthEvents() {
+  elements.authForm.addEventListener("submit", handleAuthSubmit);
+  elements.logoutButton.addEventListener("click", logout);
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+
+  const username = elements.authUsername.value.trim();
+  const password = elements.authPassword.value;
+  const auth = loadAuth();
+
+  elements.authMessage.textContent = "";
+  elements.authSubmit.disabled = true;
+
+  try {
+    if (!auth) {
+      if (password.length < 4) {
+        elements.authMessage.textContent = "Use uma senha com pelo menos 4 caracteres.";
+        return;
+      }
+
+      const salt = generateSalt();
+      const passwordHash = await hashPassword(password, salt);
+      const nextAuth = {
+        username,
+        salt,
+        passwordHash,
+        createdAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem(AUTH_KEY, JSON.stringify(nextAuth));
+      startSession(username);
+      unlockApp();
+      return;
+    }
+
+    const passwordHash = await hashPassword(password, auth.salt);
+    if (username !== auth.username || passwordHash !== auth.passwordHash) {
+      elements.authMessage.textContent = "Usuario ou senha incorretos.";
+      return;
+    }
+
+    startSession(username);
+    unlockApp();
+  } catch {
+    elements.authMessage.textContent = "Nao foi possivel verificar o acesso agora.";
+  } finally {
+    elements.authSubmit.disabled = false;
+  }
+}
+
+function renderAuth() {
+  const auth = loadAuth();
+  document.body.classList.add("auth-pending");
+  elements.appShell.hidden = true;
+  elements.authScreen.hidden = false;
+  elements.authForm.reset();
+  elements.authMessage.textContent = "";
+
+  if (auth) {
+    elements.authTitle.textContent = "Entrar";
+    elements.authCopy.textContent = "Informe seu usuario e senha para acessar suas financas.";
+    elements.authUsername.value = auth.username;
+    elements.authPassword.autocomplete = "current-password";
+    elements.authSubmit.textContent = "Entrar";
+  } else {
+    elements.authTitle.textContent = "Criar acesso";
+    elements.authCopy.textContent = "Defina um usuario e uma senha para proteger este navegador.";
+    elements.authPassword.autocomplete = "new-password";
+    elements.authSubmit.textContent = "Criar acesso";
+  }
+
+  elements.authUsername.focus();
+}
+
+function unlockApp() {
+  document.body.classList.remove("auth-pending");
+  elements.authScreen.hidden = true;
+  elements.appShell.hidden = false;
+  elements.authForm.reset();
+  initializeApp();
+}
+
+function logout() {
+  sessionStorage.removeItem(SESSION_KEY);
+  editingId = null;
+  renderAuth();
 }
 
 function bindEvents() {
@@ -669,6 +788,58 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function loadAuth() {
+  try {
+    const auth = JSON.parse(localStorage.getItem(AUTH_KEY));
+    if (!auth?.username || !auth?.salt || !auth?.passwordHash) return null;
+    return auth;
+  } catch {
+    return null;
+  }
+}
+
+function startSession(username) {
+  sessionStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify({
+      username,
+      authenticatedAt: new Date().toISOString(),
+    }),
+  );
+}
+
+function isSessionActive() {
+  const auth = loadAuth();
+  if (!auth) return false;
+
+  try {
+    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY));
+    return session?.username === auth.username;
+  } catch {
+    return false;
+  }
+}
+
+function generateSalt() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return bytesToBase64(bytes);
+}
+
+async function hashPassword(password, salt) {
+  const encoder = new TextEncoder();
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(`${salt}:${password}`));
+  return bytesToBase64(new Uint8Array(digest));
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
 function normalizeImportedState(raw) {
   const source = raw?.data ?? raw;
   if (!source || !/^\d{4}-\d{2}$/.test(source.activeMonth)) {
@@ -686,12 +857,12 @@ function sanitizeEntries(entries) {
   if (!Array.isArray(entries)) return [];
 
   return entries
-    .filter((entry) => entry && entry.id && entry.name && entry.dueDay)
+    .filter((entry) => entry && entry.id && entry.name)
     .map((entry) => ({
       id: String(entry.id),
       name: String(entry.name),
       purchaseDate: entry.purchaseDate || dateToInputValue(new Date()),
-      dueDay: Number(entry.dueDay),
+      dueDay: entry.dueDay ? Number(entry.dueDay) : null,
       originalDueDate: entry.originalDueDate || entry.purchaseDate || dateToInputValue(new Date()),
       amount: Number(entry.amount || 0),
       type: ["monthly", "installment", "expense"].includes(entry.type) ? entry.type : "expense",

@@ -59,6 +59,56 @@ body::before {
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 74%);
 }
 
+.auth-screen {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-screen[hidden] {
+  display: none;
+}
+
+.auth-card {
+  display: grid;
+  width: min(100%, 420px);
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.055)),
+    var(--glass);
+  box-shadow: var(--shadow), var(--inner-light);
+  padding: 24px;
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+}
+
+.auth-card h1 {
+  margin-bottom: 0;
+  font-size: 2.1rem;
+}
+
+.auth-copy,
+.auth-message {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.auth-message {
+  min-height: 22px;
+  color: #ffe1a1;
+  font-weight: 800;
+}
+
+.auth-card .primary-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
 button,
 input {
   font: inherit;
