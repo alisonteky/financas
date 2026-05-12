@@ -1,0 +1,17 @@
+{
+  "name": "Financas do Mes",
+  "short_name": "Financas",
+  "description": "Organize contas mensais, parcelas e gastos do mes.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f7f4",
+  "theme_color": "#247a48",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

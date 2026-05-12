@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Sistema simples para organizar contas mensais, parcelas e gastos do mes."
+    />
+    <meta name="theme-color" content="#247a48" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <title>Finanças do Mês</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar" aria-labelledby="app-title">
+        <div>
+          <p class="eyebrow">MVP financeiro</p>
+          <h1 id="app-title">Finanças do mês</h1>
+          <p class="subtitle" id="current-month-label">Carregando...</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost-button" id="export-data-button" type="button" title="Exportar backup dos dados">
+            Exportar
+          </button>
+          <button class="ghost-button" id="import-data-button" type="button" title="Importar backup dos dados">
+            Importar
+          </button>
+          <button class="ghost-button" id="close-month-button" type="button" title="Simular fechamento do mês">
+            Fechar mês
+          </button>
+          <button class="danger-button" id="clear-data-button" type="button" title="Apagar todos os dados salvos">
+            Limpar dados
+          </button>
+        </div>
+        <input id="import-file" type="file" accept="application/json" hidden />
+      </section>
+
+      <section class="summary-grid" aria-label="Resumo do mês">
+        <article class="summary-card">
+          <span class="summary-label">A pagar</span>
+          <strong id="pending-count">0</strong>
+          <small id="pending-total">R$ 0,00</small>
+        </article>
+        <article class="summary-card accent">
+          <span class="summary-label">Vencem em 7 dias</span>
+          <strong id="due-soon-count">0</strong>
+          <small>prioridade do mês</small>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Pagas no mês</span>
+          <strong id="paid-count">0</strong>
+          <small id="paid-total">R$ 0,00</small>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Concluídas</span>
+          <strong id="completed-count">0</strong>
+          <small>histórico</small>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <form class="entry-form" id="entry-form">
+          <div class="form-header">
+            <div>
+              <h2>Novo lançamento</h2>
+              <p>Cadastre contas mensais, parcelas e gastos do mês.</p>
+            </div>
+          </div>
+
+          <label>
+            Nome
+            <input id="name" name="name" type="text" placeholder="Ex.: Cartão, aluguel, mercado" required />
+          </label>
+
+          <div class="field-row">
+            <label>
+              Data da compra
+              <input id="purchase-date" name="purchaseDate" type="date" required />
+            </label>
+            <label id="due-date-field">
+              Vencimento
+              <input id="due-date" name="dueDate" type="date" required />
+            </label>
+          </div>
+
+          <div class="field-row">
+            <label>
+              Valor
+              <input id="amount" name="amount" type="number" min="0" step="0.01" placeholder="0,00" />
+            </label>
+            <div class="choice-field">
+              <span class="field-label" id="type-label">Tipo</span>
+              <input id="type" name="type" type="hidden" value="monthly" />
+              <div class="choice-select" data-choice-select data-options="entryTypes" data-target="type">
+                <button
+                  class="choice-trigger"
+                  id="type-trigger"
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-labelledby="type-label type-current"
+                >
+                  <span id="type-current" data-choice-label>Conta mensal</span>
+                  <span class="choice-chevron" aria-hidden="true"></span>
+                </button>
+                <div class="choice-menu" role="listbox" aria-labelledby="type-label" hidden></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-row installments-row" id="installments-row">
+            <label>
+              Parcela atual
+              <input id="current-installment" name="currentInstallment" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Total de parcelas
+              <input id="total-installments" name="totalInstallments" type="number" min="1" value="1" />
+            </label>
+          </div>
+
+          <label class="checkbox-line">
+            <input id="paid" name="paid" type="checkbox" />
+            Já foi pago
+          </label>
+
+          <button class="primary-button" type="submit">Adicionar</button>
+        </form>
+
+        <section class="list-panel" aria-labelledby="list-title">
+          <div class="tabs" role="tablist" aria-label="Listas de contas">
+            <button class="tab-button active" type="button" data-tab="pending" role="tab">A pagar</button>
+            <button class="tab-button" type="button" data-tab="paid" role="tab">Pagas</button>
+            <button class="tab-button" type="button" data-tab="completed" role="tab">Concluídas</button>
+          </div>
+
+          <div class="panel-heading">
+            <div>
+              <h2 id="list-title">A pagar</h2>
+              <p id="list-description">Contas abertas para o mês atual.</p>
+            </div>
+            <div class="choice-select sort-choice" data-choice-select data-options="sortOptions" data-target="sort-select">
+              <input id="sort-select" type="hidden" value="due" aria-label="Ordenar lista" />
+              <button
+                class="choice-trigger"
+                id="sort-trigger"
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-labelledby="sort-label sort-current"
+              >
+                <span class="sr-only" id="sort-label">Ordenar lista</span>
+                <span id="sort-current" data-choice-label>Vencimento</span>
+                <span class="choice-chevron" aria-hidden="true"></span>
+              </button>
+              <div class="choice-menu" role="listbox" aria-labelledby="sort-label" hidden></div>
+            </div>
+          </div>
+
+          <div class="reminder-strip" id="reminder-strip" hidden></div>
+          <div class="entries-list" id="entries-list"></div>
+          <div class="empty-state" id="empty-state" hidden>
+            <strong>Nada por aqui ainda.</strong>
+            <span>Adicione um lançamento para começar a acompanhar o mês.</span>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <template id="entry-template">
+      <article class="entry-card">
+        <div class="entry-main">
+          <label class="pay-toggle">
+            <input class="entry-paid" type="checkbox" />
+            <span></span>
+          </label>
+          <div>
+            <h3 class="entry-name"></h3>
+            <p class="entry-meta"></p>
+          </div>
+        </div>
+        <div class="entry-side">
+          <strong class="entry-amount"></strong>
+          <span class="entry-status"></span>
+          <div class="entry-actions">
+            <button class="icon-button edit-entry" type="button" title="Editar">Editar</button>
+            <button class="icon-button delete-entry" type="button" title="Excluir">Excluir</button>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
